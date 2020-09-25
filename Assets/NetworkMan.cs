@@ -69,11 +69,6 @@ public class NetworkMan : MonoBehaviour
         public Player[] players;
     }
 
-    [Serializable]
-    public class PlayerID
-    {
-        public int ID;
-    }
     public Message latestMessage;
     public GameState latestGameState;
     
