@@ -5,16 +5,21 @@ using System;
 using System.Text;
 using System.Net.Sockets;
 using System.Net;
+using UnityEngine.UIElements;
 
 public class NetworkMan : MonoBehaviour
 {
     public UdpClient udp;
+    private string IncomingMessage;
+    public string myID;
+    
     // Start is called before the first frame update
     void Start()
     {
+        myID = "newID";
         udp = new UdpClient();
         
-        udp.Connect("PUT_IP_ADDRESS_HERE",12345);
+        udp.Connect("18.219.192.76", 12345);
 
         Byte[] sendBytes = Encoding.ASCII.GetBytes("connect");
       
@@ -32,12 +37,14 @@ public class NetworkMan : MonoBehaviour
 
     public enum commands{
         NEW_CLIENT,
-        UPDATE
+        UPDATE,
+        CLIENT_REMOVED
     };
     
     [Serializable]
     public class Message{
         public commands cmd;
+    
     }
     
     [Serializable]
@@ -62,8 +69,14 @@ public class NetworkMan : MonoBehaviour
         public Player[] players;
     }
 
+    [Serializable]
+    public class PlayerID
+    {
+        public int ID;
+    }
     public Message latestMessage;
-    public GameState lastestGameState;
+    public GameState latestGameState;
+    
     void OnReceived(IAsyncResult result){
         // this is what had been passed into BeginReceive as the second parameter:
         UdpClient socket = result.AsyncState as UdpClient;
@@ -76,15 +89,23 @@ public class NetworkMan : MonoBehaviour
         
         // do what you'd like with `message` here:
         string returnData = Encoding.ASCII.GetString(message);
-        Debug.Log("Got this: " + returnData);
+        IncomingMessage = "Got this" + returnData;
+        //Debug.Log("Got this: " + returnData);
         
         latestMessage = JsonUtility.FromJson<Message>(returnData);
         try{
             switch(latestMessage.cmd){
                 case commands.NEW_CLIENT:
+                    NewPlayerArrived();
                     break;
                 case commands.UPDATE:
-                    lastestGameState = JsonUtility.FromJson<GameState>(returnData);
+                    latestGameState = JsonUtility.FromJson<GameState>(returnData);
+                    if(myID == "newID")
+                    { myID = latestGameState.players[latestGameState.players.Length-1].id; }
+                    break;
+                case commands.CLIENT_REMOVED:
+                    Debug.Log("Player Left The Game:");
+                    PlayerRemoved();
                     break;
                 default:
                     Debug.Log("Error");
@@ -99,12 +120,23 @@ public class NetworkMan : MonoBehaviour
         socket.BeginReceive(new AsyncCallback(OnReceived), socket);
     }
 
-    void SpawnPlayers(){
+    void SpawnPlayer(){
 
     }
 
     void UpdatePlayers(){
+     
+    }
 
+    void NewPlayerArrived()
+    {
+        Debug.Log("New Player Arrived");
+        Debug.Log(IncomingMessage);
+    }
+
+    void PlayerRemoved()
+    {
+        Debug.Log(IncomingMessage);
     }
 
     void DestroyPlayers(){
@@ -117,7 +149,7 @@ public class NetworkMan : MonoBehaviour
     }
 
     void Update(){
-        SpawnPlayers();
+        SpawnPlayer();
         UpdatePlayers();
         DestroyPlayers();
     }
