@@ -19,7 +19,7 @@ public class NetworkMan : MonoBehaviour
         myID = "newID";
         udp = new UdpClient();
         
-        udp.Connect("18.219.192.76", 12345);
+        udp.Connect("localhost", 12345);
 
         Byte[] sendBytes = Encoding.ASCII.GetBytes("connect");
       
