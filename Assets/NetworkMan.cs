@@ -82,8 +82,8 @@ public class NetworkMan : MonoBehaviour
     [Serializable]// We need a class to store incoming new players from server
     public class NewPlayer { public Player player;}
 
-    [Serializable]// We also need a list of dropped players so we can destroy them.
-    public class DroppedPlayer { public string id;}
+    [Serializable]// We also need a list of dropped players so we can destroy them.//correction; now just holding 1 object to feed into a list
+    public class DroppedPlayer { public string id; }
 
     [Serializable]//Lastly we need a list of the players already in the game for new arrivals to spawn.
     public class PlayersAlreadyInGame { public Player[] players;}
@@ -125,7 +125,7 @@ public class NetworkMan : MonoBehaviour
                     DroppedPlayer d = JsonUtility.FromJson<DroppedPlayer>(returnData);//Store that player. 
                     Debug.Log("Player Left The Game:");
                     PlayerRemoved();
-                    DestroyPlayers(d.id);//Destroy that player by its id.;
+                    PlayersToDestroyList.Add(d.id);//Destroy that player by its id.;
                     break;
                 case commands.GET_PLAYERS_IN_GAME:
                     //When a new player connects, get/make an object(list) of all players already in the game.
@@ -220,6 +220,15 @@ public class NetworkMan : MonoBehaviour
         }
         
     }
+    void DestroyFromDroppedList()
+    {
+        for (int i = 0; i < PlayersToDestroyList.Count; i++)
+        {
+            DestroyPlayers(PlayersToDestroyList[i]);
+        }
+        PlayersToDestroyList.Clear();
+        PlayersToDestroyList.TrimExcess();
+    }
     
     void HeartBeat(){
         Byte[] sendBytes = Encoding.ASCII.GetBytes("heartbeat");
@@ -240,6 +249,7 @@ public class NetworkMan : MonoBehaviour
 
     void Update(){
         SpawnPlayersFromList();
+        DestroyFromDroppedList();
         UpdatePlayers();
     }
 }
