@@ -13,6 +13,11 @@ public class PlayerCube : MonoBehaviour
         nw = GameObject.Find("NetworkMan");
     }
 
+    public void DestroyCube()
+    {
+        Destroy(gameObject);
+        Debug.Log("CUBE DESTROYED**********************");
+    }
     // Update is called once per frame
     void Update()
     {

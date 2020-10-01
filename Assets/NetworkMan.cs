@@ -16,6 +16,7 @@ public class NetworkMan : MonoBehaviour
     public GameObject PlayerPrefab;
     ///Too confusing must use long names. 
     public List<string> PlayersToSpawnList;
+    public List<string> PlayersToDestroyList;
     public List<PlayerCube> PlayersInGameList;
     public float mX, mY, mZ;
 
@@ -82,7 +83,7 @@ public class NetworkMan : MonoBehaviour
     public class NewPlayer { public Player player;}
 
     [Serializable]// We also need a list of dropped players so we can destroy them.
-    public class DroppedPlayer { public string id; public Player[] players;}
+    public class DroppedPlayer { public string id;}
 
     [Serializable]//Lastly we need a list of the players already in the game for new arrivals to spawn.
     public class PlayersAlreadyInGame { public Player[] players;}
@@ -113,8 +114,8 @@ public class NetworkMan : MonoBehaviour
                 case commands.NEW_CLIENT:
                     NewPlayerArrived();
                     NewPlayer p = JsonUtility.FromJson<NewPlayer>(returnData);
-                    PlayersToSpawnList.Add(p.player.id);
                     if (myID == "newID") { myID = p.player.id; }
+                    PlayersToSpawnList.Add(p.player.id);
                     break;
                 case commands.UPDATE://When we receive this command from server, update all our cubes. 
                     latestGameState = JsonUtility.FromJson<GameState>(returnData);
@@ -153,21 +154,19 @@ public class NetworkMan : MonoBehaviour
     
     void SpawnPlayersFromList()//Take the list we got from the server to spawn cubes in next function.
     {
-        if(PlayersToSpawnList.Count > 0)
-        {
-            for(int i = 0; i < PlayersToSpawnList.Count; i++)//loop through our spawn list
+        for(int i = 0; i < PlayersToSpawnList.Count; i++)//loop through our spawn list
             {
                 InstantiateCubes(PlayersToSpawnList[i]);
             }
-            PlayersToSpawnList.Clear();//Clear the list when were done.
-            PlayersToSpawnList.TrimExcess();
-        }
+        
+        PlayersToSpawnList.Clear();//Clear the list when were done.
+
+        PlayersToSpawnList.TrimExcess();
+        
     }
 
     void InstantiateCubes(string id)//Spawn Player.
     {
-
-        
         GameObject o = Instantiate(PlayerPrefab, Vector3.zero, Quaternion.identity);
         o.GetComponent<PlayerCube>().ClientID = id;//add the passed id to its id
         PlayersInGameList.Add(o.GetComponent<PlayerCube>()); //add the cube to our list
@@ -177,20 +176,24 @@ public class NetworkMan : MonoBehaviour
     void UpdatePlayers()
     {
         //Loop through all the players and update their position from our gamestate.
-        if (PlayersInGameList.Count < 1) return;
-        if (latestGameState.players.Length < 1) return;
-        for(int i = 0; i < PlayersInGameList.Count; i++)
+        for(int i = 0; i < latestGameState.players.Length; i++)
         {
            if(latestGameState.players[i].id != myID)
             {
-            float XX = latestGameState.players[i].position.x;
-            float YY = latestGameState.players[i].position.y;
-            float ZZ = latestGameState.players[i].position.z;
-            PlayersInGameList[i].transform.position = new Vector3(XX, YY, ZZ);
+                for(int j = 0; j < PlayersInGameList.Count; j++)
+                {
+                    if (PlayersInGameList[j].ClientID == latestGameState.players[i].id)
+                    {
+                        float XX = latestGameState.players[i].position.x;
+                        float YY = latestGameState.players[i].position.y;
+                        float ZZ = latestGameState.players[i].position.z;
+                        PlayersInGameList[j].transform.position = new Vector3(XX, YY, ZZ);
+                    }
 
-            }
-            
-             
+
+                }
+
+            }            
         }
      
     }
@@ -211,9 +214,11 @@ public class NetworkMan : MonoBehaviour
         {
             if(PlayersInGameList[i].ClientID == id)
             {
-                Destroy(PlayersInGameList[i].gameObject);
+                PlayersInGameList[i].gameObject.SendMessage("DestroyCube");
+                Debug.Log("Attempt to destroy object");
             }
         }
+        
     }
     
     void HeartBeat(){
@@ -223,7 +228,8 @@ public class NetworkMan : MonoBehaviour
 
     void SendStuff()
     {
-        PositionMessager m = new PositionMessager();
+       PositionMessager m = new PositionMessager();
+        
         m.position.x = mX;
         m.position.y = mY;
         m.position.z = mZ;
